@@ -42,7 +42,8 @@ response = await fetch(Request("https://api.example.com/health"))
 
 HTTP error statuses resolve to a `Response`; network failures raise `OSError`.
 Responses are buffered in the public 0.1 contract. Redirects follow by default,
-or use `UrllibBackend(redirect="manual")` to surface the redirect response.
+or pass `default_backend(redirect="manual")` to surface redirects consistently
+on CPython and Workers.
 
 ## Backends
 
