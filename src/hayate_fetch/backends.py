@@ -13,6 +13,7 @@ import urllib.error
 import urllib.request
 from importlib import import_module
 from typing import Any, Protocol
+from urllib.parse import urlsplit
 
 from hayate import Headers, Request, Response
 
@@ -59,7 +60,7 @@ class UrllibBackend:
     def _opener(self) -> urllib.request.OpenerDirector:
         if self.redirect == "manual":
             return urllib.request.build_opener(_NoRedirect)
-        return urllib.request.build_opener()
+        return urllib.request.build_opener(_FetchRedirect)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -67,8 +68,66 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+class _FetchRedirect(urllib.request.HTTPRedirectHandler):
+    """Fetch-compatible redirect methods without cross-origin credential leaks."""
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> urllib.request.Request:
+        method = req.get_method()
+        redirected_method = method
+        data = req.data
+        drop_body = code == 303 and method not in ("GET", "HEAD")
+        drop_body = drop_body or (code in (301, 302) and method == "POST")
+        if drop_body:
+            redirected_method = "GET"
+            data = None
+
+        copied_headers = {
+            name: value
+            for name, value in req.headers.items()
+            if name.lower() != "host"
+            and (
+                not drop_body
+                or name.lower() not in ("content-encoding", "content-length", "content-type")
+            )
+        }
+        if _origin(req.full_url) != _origin(newurl):
+            copied_headers = {
+                name: value
+                for name, value in copied_headers.items()
+                if name.lower() not in ("authorization", "cookie", "proxy-authorization")
+            }
+
+        return urllib.request.Request(
+            newurl.replace(" ", "%20"),
+            data=data,
+            headers=copied_headers,
+            method=redirected_method,
+            origin_req_host=req.origin_req_host,
+            unverifiable=True,
+        )
+
+
+def _origin(url: str) -> tuple[str, str | None, int | None]:
+    parsed = urlsplit(url)
+    default_port = 443 if parsed.scheme.lower() == "https" else 80
+    return parsed.scheme.lower(), parsed.hostname, parsed.port or default_port
+
+
 class WorkersBackend:
     """Cloudflare Workers backend: the JS global ``fetch`` (a subrequest)."""
+
+    def __init__(self, *, redirect: str = "follow") -> None:
+        if redirect not in ("follow", "manual"):
+            raise ValueError("redirect must be 'follow' or 'manual'")
+        self.redirect = redirect
 
     async def send(self, request: Request) -> Response:
         js = import_module("js")
@@ -77,6 +136,7 @@ class WorkersBackend:
         options: dict[str, Any] = {
             "method": request.method,
             "headers": list(request.headers),
+            "redirect": self.redirect,
         }
         if request.method not in ("GET", "HEAD"):
             body = await request.bytes()
@@ -91,7 +151,7 @@ class WorkersBackend:
         return Response(data, status=int(js_response.status), headers=headers)
 
 
-def default_backend() -> FetchBackend:
+def default_backend(*, redirect: str = "follow") -> FetchBackend:
     if sys.platform == "emscripten":
-        return WorkersBackend()
-    return UrllibBackend()
+        return WorkersBackend(redirect=redirect)
+    return UrllibBackend(redirect=redirect)
