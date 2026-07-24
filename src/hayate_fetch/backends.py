@@ -11,6 +11,7 @@ import asyncio
 import sys
 import urllib.error
 import urllib.request
+from importlib import import_module
 from typing import Any, Protocol
 
 from hayate import Headers, Request, Response
@@ -70,8 +71,8 @@ class WorkersBackend:
     """Cloudflare Workers backend: the JS global ``fetch`` (a subrequest)."""
 
     async def send(self, request: Request) -> Response:
-        import js
-        from pyodide.ffi import to_js
+        js = import_module("js")
+        to_js = import_module("pyodide.ffi").to_js
 
         options: dict[str, Any] = {
             "method": request.method,

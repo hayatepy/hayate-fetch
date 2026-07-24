@@ -8,7 +8,7 @@ from hayate import Request, Response
 
 from .backends import FetchBackend, UrllibBackend, WorkersBackend, default_backend
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     "FetchBackend",
