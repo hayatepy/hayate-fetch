@@ -1,5 +1,9 @@
 # hayate-fetch
 
+> **Hayate ecosystem:** [Start here](https://github.com/hayatepy/.github/blob/main/docs/START.md)
+> · [Production golden app](https://github.com/hayatepy/golden-app)
+> · [Tested compatibility](https://github.com/hayatepy/.github/blob/main/docs/COMPATIBILITY.md)
+
 Client-side WHATWG fetch for [hayate](https://github.com/hayatepy/hayate):
 the same Request/Response types your server handles, pointed outward.
 
