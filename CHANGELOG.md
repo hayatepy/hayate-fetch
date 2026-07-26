@@ -2,6 +2,13 @@
 
 All notable changes to hayate-fetch are documented here.
 
+## [0.1.3] - 2026-07-26
+
+### Changed
+
+- Link the canonical ecosystem start page, production golden app, and tested
+  compatibility evidence from the published package description.
+
 ## [0.1.2] - 2026-07-24
 
 ### Changed
