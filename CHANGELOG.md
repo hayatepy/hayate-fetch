@@ -2,6 +2,13 @@
 
 All notable changes to hayate-fetch are documented here.
 
+## [0.1.4] - 2026-07-30
+
+### Changed
+
+- Route package discovery, start, and tested-compatibility links through
+  `hayatepy.dev`, including the PyPI project homepage.
+
 ## [0.1.3] - 2026-07-26
 
 ### Changed
