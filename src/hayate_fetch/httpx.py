@@ -11,7 +11,7 @@ class HttpxBackend:
 
     The caller owns the client lifecycle, connection limits, timeouts, TLS,
     proxies, and optional HTTP/2 configuration. Responses remain buffered to
-    preserve the public hayate-fetch 0.1 contract.
+    preserve the current public hayate-fetch contract.
     """
 
     def __init__(self, client: httpx.AsyncClient, *, redirect: str = "follow") -> None:

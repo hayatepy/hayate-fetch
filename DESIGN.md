@@ -80,7 +80,8 @@ FetchBackend protocol:  async send(Request) -> Response
 | 版 | 内容 | 受け入れ基準 |
 |---|---|---|
 | v0.1 | `fetch()` + FetchBackend + urllib / Workers 両実装 | hayate-auth v0.2 の OAuth フローが CPython と workerd の両方で同一コードで通る(= auth の受け入れテストが背中を押す)。実装は auth v0.2 と同一作業列で行う |
-| v0.2+ | ストリーミング応答の公開契約化 / mcp クライアントとの合流判断 | 証拠駆動 |
+| v0.2 | application-owned `httpx.AsyncClient` を使う optional backend | 基本 install のゼロ追加依存を維持し、pooling / redirect / error 契約を受け入れテストで固定 |
+| 将来 | ストリーミング応答の公開契約化 / mcp クライアントとの合流判断 | 証拠駆動 |
 
 ### 決定済み(2026-07-23)
 

@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "hayate-fetch"
-version = "0.2.0"
+version = "0.2.1"
 description = "Client-side WHATWG fetch for hayate: the same Request/Response types, pointed outward"
 readme = "README.md"
 requires-python = ">=3.12"

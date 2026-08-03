@@ -4,6 +4,13 @@ All notable changes to hayate-fetch are documented here.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-03
+
+### Fixed
+
+- Update package status and buffered-contract documentation for the 0.2 line,
+  including the optional HTTPX milestone in the design record.
+
 ## [0.2.0] - 2026-08-03
 
 ### Added
