@@ -2,6 +2,16 @@
 
 All notable changes to hayate-fetch are documented here.
 
+## [Unreleased]
+
+## [0.2.0] - 2026-08-03
+
+### Added
+
+- Add an optional `HttpxBackend` for application-owned `httpx.AsyncClient`
+  instances, preserving connection pooling, async transport configuration,
+  redirect credential stripping, and the existing buffered Response contract.
+
 ## [0.1.4] - 2026-07-30
 
 ### Changed

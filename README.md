@@ -19,6 +19,12 @@ the same Request/Response types your server handles, pointed outward.
 uv add hayate-fetch        # or: pip install hayate-fetch
 ```
 
+For pooled asynchronous CPython requests, install the optional HTTPX backend:
+
+```sh
+uv add "hayate-fetch[httpx]"
+```
+
 ## Use
 
 ```python
@@ -55,8 +61,27 @@ on CPython and Workers.
   `asyncio.to_thread`, so the package adds no HTTP dependency.
 - **Cloudflare Workers:** `WorkersBackend` passes through to the platform's
   JavaScript `fetch`.
+- **HTTPX (optional, CPython):** `HttpxBackend` adapts an application-owned
+  `httpx.AsyncClient`, preserving its connection pool, timeout, TLS, proxy,
+  and optional HTTP/2 configuration.
 - **Custom clients:** implement the async `FetchBackend.send(Request) ->
   Response` protocol and pass it as `backend=`.
+
+Keep one HTTPX client for the application lifetime rather than constructing it
+inside a hot request loop:
+
+```python
+import httpx
+
+from hayate_fetch import fetch
+from hayate_fetch.httpx import HttpxBackend
+
+async with httpx.AsyncClient() as client:
+    response = await fetch(
+        "https://api.example.com/books",
+        backend=HttpxBackend(client),
+    )
+```
 
 The default backend is selected from the runtime. Browser-only Fetch fields
 such as `mode`, `credentials`, and `cache` are intentionally outside the

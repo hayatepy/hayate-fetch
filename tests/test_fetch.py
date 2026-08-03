@@ -4,9 +4,11 @@ import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import httpx
 import pytest
 
 from hayate_fetch import UrllibBackend, WorkersBackend, default_backend, fetch
+from hayate_fetch.httpx import HttpxBackend
 
 
 class EchoHandler(BaseHTTPRequestHandler):
@@ -38,6 +40,7 @@ class EchoHandler(BaseHTTPRequestHandler):
             "echo": self.rfile.read(length).decode() if length else None,
             "header": self.headers.get("x-probe"),
             "authorization": self.headers.get("authorization"),
+            "cookie": self.headers.get("cookie"),
         }
         status = 404 if self.path == "/missing" else 200
         data = json.dumps(payload).encode()
@@ -83,6 +86,7 @@ async def test_post_body_and_headers(base_url):
         "echo": "payload",
         "header": "42",
         "authorization": None,
+        "cookie": None,
     }
 
 
@@ -169,3 +173,100 @@ async def test_cross_origin_redirect_drops_authorization_header(base_url):
     finally:
         source.shutdown()
         target.shutdown()
+
+
+@pytest.fixture
+async def httpx_backend():
+    async with httpx.AsyncClient() as client:
+        yield HttpxBackend(client)
+
+
+async def test_httpx_backend_uses_fetch_request_and_response_contract(base_url, httpx_backend):
+    response = await fetch(
+        f"{base_url}/submit",
+        method="POST",
+        headers={"x-probe": "httpx", "content-type": "text/plain"},
+        body="pooled",
+        backend=httpx_backend,
+    )
+    assert response.status == 200
+    assert await response.json() == {
+        "method": "POST",
+        "path": "/submit",
+        "echo": "pooled",
+        "header": "httpx",
+        "authorization": None,
+        "cookie": None,
+    }
+
+    missing = await fetch(f"{base_url}/missing", backend=httpx_backend)
+    assert missing.status == 404
+
+
+async def test_httpx_backend_redirect_modes(base_url):
+    async with httpx.AsyncClient() as client:
+        followed = await fetch(
+            f"{base_url}/redirect-303",
+            method="PATCH",
+            body="discarded",
+            backend=HttpxBackend(client),
+        )
+        assert (await followed.json())["method"] == "GET"
+
+        manual = await fetch(
+            f"{base_url}/redirect",
+            backend=HttpxBackend(client, redirect="manual"),
+        )
+        assert manual.status == 302
+        assert manual.headers.get("location") == "/target"
+
+
+async def test_httpx_backend_cross_origin_redirect_drops_credentials():
+    target = ThreadingHTTPServer(("127.0.0.1", 0), EchoHandler)
+    target_thread = threading.Thread(target=target.serve_forever, daemon=True)
+    target_thread.start()
+    target_url = f"http://127.0.0.1:{target.server_address[1]}/target"
+
+    class CrossOriginRedirect(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(302)
+            self.send_header("location", target_url)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    source = ThreadingHTTPServer(("127.0.0.1", 0), CrossOriginRedirect)
+    source_thread = threading.Thread(target=source.serve_forever, daemon=True)
+    source_thread.start()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await fetch(
+                f"http://127.0.0.1:{source.server_address[1]}/redirect",
+                headers={
+                    "authorization": "Bearer must-not-leak",
+                    "cookie": "session=must-not-leak",
+                },
+                backend=HttpxBackend(client),
+            )
+        data = await response.json()
+        assert data["authorization"] is None
+        assert data["cookie"] is None
+    finally:
+        source.shutdown()
+        target.shutdown()
+
+
+async def test_httpx_backend_maps_transport_failure_to_oserror():
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(OSError):
+            await fetch(
+                "http://127.0.0.1:1/unreachable",
+                backend=HttpxBackend(client),
+            )
+
+
+async def test_httpx_backend_validates_redirect_policy():
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ValueError, match="redirect"):
+            HttpxBackend(client, redirect="unsafe")
