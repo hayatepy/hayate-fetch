@@ -27,7 +27,7 @@ class UrllibBackend:
 
     Fetch semantics: HTTP error statuses come back as Responses, not
     exceptions; only network/protocol failures raise (OSError). Responses
-    are buffered (DESIGN §3, the v0.1 contract).
+    are buffered (DESIGN §3, the current public contract).
     """
 
     def __init__(self, *, timeout: float = 30.0, redirect: str = "follow") -> None:

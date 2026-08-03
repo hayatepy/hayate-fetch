@@ -7,7 +7,7 @@
 Client-side WHATWG fetch for [hayate](https://github.com/hayatepy/hayate):
 the same Request/Response types your server handles, pointed outward.
 
-> **Status: alpha (0.1.x), typed.** `fetch()`, the `FetchBackend` protocol, and the
+> **Status: alpha (0.x), typed.** `fetch()`, the `FetchBackend` protocol, and the
 > CPython and Cloudflare Workers backends are implemented and used by
 > hayate-auth for OAuth token exchange. The design memo (Japanese, per project
 > convention) lives in [DESIGN.md](DESIGN.md); release history is in
@@ -51,7 +51,7 @@ response = await fetch(Request("https://api.example.com/health"))
 ```
 
 HTTP error statuses resolve to a `Response`; network failures raise `OSError`.
-Responses are buffered in the public 0.1 contract. Redirects follow by default,
+Responses are buffered in the current public contract. Redirects follow by default,
 or pass `default_backend(redirect="manual")` to surface redirects consistently
 on CPython and Workers.
 
