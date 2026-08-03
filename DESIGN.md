@@ -14,7 +14,8 @@
   - **CPython 既定**: stdlib `urllib.request` + `asyncio.to_thread`(ゼロ依存)
   - **Workers 既定**: JS グローバル `fetch` へのパススルー(本体 workers adapter の
     FFI 変換部品を再利用。Workers では subrequest として最速・正道)
-  - httpx / aiohttp を使いたい人は protocol を実装して注入(レシピを docs に)
+  - **CPython optional**: `hayate-fetch[httpx]` の `HttpxBackend` にアプリ所有の
+    `httpx.AsyncClient` を注入(接続プール・timeout・TLS・proxy 設定を保持)
 
 ```python
 from hayate_fetch import fetch
@@ -53,12 +54,13 @@ hayate_fetch.fetch(input, **init) -> Response     # 表面(WHATWG 形)
 ─────────────────────────────────────────────
 FetchBackend protocol:  async send(Request) -> Response
 ─────────────────────────────────────────────
-実装:  UrllibBackend(CPython 既定)| WorkersBackend(js.fetch)| 外部(httpx 等)
+実装:  UrllibBackend(CPython 既定)| WorkersBackend(js.fetch)| HttpxBackend(optional)
 ```
 
 - 既定バックエンドは実行環境で自動選択(`sys.platform == "emscripten"` → Workers)。
   auth の CryptoBackend / KDF 自動選択と同じパターン。
-- **却下**: httpx への依存 — ゼロ依存原則。protocol 注入で足りる。
+- **却下**: httpx への必須依存 — 既定のゼロ依存原則は維持し、必要な利用者だけが
+  optional extra と protocol 注入で選択する。
 - **却下**: 独自の HTTP/1.1 実装 — YAGNI + セキュリティ表面積。stdlib / プラットフォームに委譲。
 - ストリーミング応答: v0.1 はバッファ(urllib の制約に合わせる)。Workers 側は
   ReadableStream ブリッジ(本体 research §5 の部品)で自然にストリームになるが、
@@ -70,7 +72,7 @@ FetchBackend protocol:  async send(Request) -> Response
 |---|---|
 | cookie jar / セッション管理 | 消費者(auth の OAuth)はステートレスな 1 発 POST。証拠待ち |
 | リトライ / バックオフ | ポリシーはアプリの領分。protocol の外で包める |
-| HTTP/2, 接続プール | urllib / JS fetch の挙動に委譲。性能要求の証拠が出たら backend 追加で対応 |
+| HTTP/2, 接続プールの独自管理 | urllib / JS fetch、または optional `HttpxBackend` に注入した `AsyncClient` に委譲 |
 | ブラウザ専用 Fetch フィールド | サーバーサイドに意味がない(§2) |
 
 ## 5. マイルストーン
